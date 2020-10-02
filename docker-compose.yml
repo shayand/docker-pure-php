@@ -1,0 +1,63 @@
+###############################################################################
+#                          Generated on phpdocker.io                          #
+###############################################################################
+version: "3.1"
+
+volumes:
+  xampp_data:
+    driver: local
+    
+services:
+
+    mariadb:
+      image: mariadb:10.4
+      container_name: xampp-db
+      working_dir: /application
+      volumes:
+        - .:/application
+        - xampp_data:/var/lib/mysql
+      environment:
+        - MYSQL_ROOT_PASSWORD=very_secret
+        - MYSQL_DATABASE=xampp_db
+        - MYSQL_USER=xampp_user
+        - MYSQL_PASSWORD=secret
+      ports:
+        - "10001:3306"
+
+    webserver:
+      image: nginx:alpine
+      working_dir: /application
+      volumes:
+        - .:/application
+        - ./docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      ports:
+        - "80:80"
+      depends_on:
+        - php-fpm
+
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin:4.9
+        depends_on:
+          - mariadb
+        ports:
+          - "10003:80"
+        environment:
+          - PMA_HOST=xampp-db
+        volumes:
+          - /sessions
+          - ./docker/phpmyadmin/save/:/var/www/phpmyadmin/save/
+          - ./docker/phpmyadmin/upload/:/var/www/phpmyadmin/upload/
+          - ./docker/phpmyadmin/config.php:/etc/phpmyadmin/config.user.inc.php
+          
+    php-fpm:
+      build:
+        context: ./docker/php-fpm
+        dockerfile: Dockerfile
+      working_dir: /application
+      depends_on:
+        - mariadb
+      volumes:
+        - .:/application
+        - ./docker/php-fpm/php-ini-overrides.ini:/usr/local/etc/php/conf.d/99-overrides.ini
+          
+    
